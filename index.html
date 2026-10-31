@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Garden Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parchment: #F3EEE1;
+    --parchment-deep: #ECE4D2;
+    --ink: #262420;
+    --ink-soft: #55503F;
+    --moss: #3F5D46;
+    --moss-dark: #2C4432;
+    --rust: #B85C2E;
+    --rust-deep: #9A4A22;
+    --sage: #D9E1CE;
+    --gold: #A2823D;
+    --line: rgba(38,36,32,0.14);
+    --header-h: 108px;
+    --handle-h: 52px;
+    --panel-max-h: 48vh;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--parchment);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead{
+    height:var(--header-h);
+    padding:16px clamp(20px, 4vw, 48px) 14px;
+    border-bottom:2px solid var(--ink);
+    background:
+      repeating-linear-gradient(180deg, transparent 0 27px, var(--line) 27px 28px),
+      var(--parchment);
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:24px;
+  }
+  .masthead-title-wrap{display:flex; flex-direction:column; gap:2px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--rust-deep);
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(24px, 3.4vw, 34px);
+    margin:0;
+    line-height:1.05;
+    letter-spacing:-0.01em;
+  }
+  .tally{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    text-align:right;
+    white-space:nowrap;
+    padding-bottom:4px;
+  }
+  .tally strong{color:var(--moss-dark); font-size:16px;}
+
+  /* ---------- List pane ---------- */
+  .list-pane{
+    height: calc(100vh - var(--header-h) - var(--handle-h));
+    overflow-y:auto;
+    transition:height .38s cubic-bezier(.4,0,.2,1);
+    padding: 0 clamp(20px, 4vw, 48px) 24px;
+  }
+  body.panel-maximized .list-pane{
+    height: calc(100vh - var(--header-h) - var(--panel-max-h));
+  }
+
+  table.garden-table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:18px;
+  }
+  thead th{
+    position:sticky;
+    top:0;
+    background:var(--parchment);
+    z-index:2;
+    text-align:left;
+    padding:10px 14px;
+    border-bottom:2px solid var(--ink);
+  }
+  thead th button{
+    all:unset;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  thead th button:hover{color:var(--moss-dark);}
+  thead th button:focus-visible{
+    outline:2px solid var(--rust);
+    outline-offset:3px;
+    border-radius:2px;
+  }
+  .sort-arrow{
+    font-size:10px;
+    opacity:0;
+    transform:translateY(-1px);
+    transition:opacity .15s ease, transform .15s ease;
+  }
+  thead th[aria-sort="ascending"] .sort-arrow,
+  thead th[aria-sort="descending"] .sort-arrow{
+    opacity:1;
+    color:var(--rust);
+  }
+  thead th[aria-sort="descending"] .sort-arrow{ transform:rotate(180deg); }
+
+  tbody tr{
+    border-bottom:1px solid var(--line);
+    transition:background-color .25s ease;
+  }
+  tbody tr:hover{ background:rgba(63,93,70,0.06); }
+  tbody tr.selected{
+    background:var(--sage);
+  }
+  tbody tr.selected td:first-child{
+    box-shadow: inset 3px 0 0 var(--rust);
+  }
+  tbody td{
+    padding:13px 14px;
+    font-size:14.5px;
+    vertical-align:middle;
+  }
+  td.col-name{ font-weight:500; }
+  td.col-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--moss-dark);
+  }
+  td.col-location{ color:var(--ink-soft); }
+
+  .visit-link{
+    all:unset;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--rust-deep);
+    padding:5px 10px;
+    border:1px solid var(--rust-deep);
+    border-radius:20px;
+    transition:background-color .15s ease, color .15s ease;
+  }
+  .visit-link:hover{ background:var(--rust-deep); color:var(--parchment); }
+  .visit-link:focus-visible{ outline:2px solid var(--moss); outline-offset:2px; }
+  .visit-link .arrow{ transition:transform .15s ease; }
+  .visit-link:hover .arrow{ transform:translate(2px,-2px); }
+
+  .empty-state, .error-state{
+    padding:40px 10px;
+    color:var(--ink-soft);
+    font-size:14px;
+    max-width:520px;
+  }
+  .error-state code{
+    background:var(--parchment-deep);
+    padding:2px 6px;
+    border-radius:4px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+  }
+
+  /* ---------- Viewer panel ---------- */
+  .viewer-panel{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    height:var(--handle-h);
+    background:var(--ink);
+    display:flex;
+    flex-direction:column;
+    box-shadow: 0 -6px 24px rgba(0,0,0,0.18);
+    transition:height .38s cubic-bezier(.4,0,.2,1);
+    z-index:10;
+  }
+  body.panel-maximized .viewer-panel{ height:var(--panel-max-h); }
+
+  .viewer-handle{
+    all:unset;
+    flex: 0 0 var(--handle-h);
+    height:var(--handle-h);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:0 clamp(16px, 4vw, 48px);
+    cursor:pointer;
+    color:var(--parchment);
+    position:relative;
+  }
+  .viewer-handle:focus-visible{ outline:2px solid var(--rust); outline-offset:-3px; }
+  .handle-grip{
+    width:34px;
+    height:4px;
+    border-radius:2px;
+    background:var(--parchment-deep);
+    opacity:.5;
+    flex-shrink:0;
+  }
+  .handle-leaf{
+    font-size:14px;
+    flex-shrink:0;
+    filter:saturate(1.1);
+  }
+  .handle-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:.03em;
+    color:var(--parchment-deep);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    flex:1;
+  }
+  .handle-label strong{ color:var(--parchment); font-weight:500; }
+  .handle-chevron{
+    font-size:11px;
+    color:var(--parchment-deep);
+    transition:transform .38s cubic-bezier(.4,0,.2,1);
+    flex-shrink:0;
+  }
+  body.panel-maximized .handle-chevron{ transform:rotate(180deg); }
+
+  .viewer-body{
+    flex:1;
+    min-height:0;
+    background:var(--parchment-deep);
+    position:relative;
+  }
+  .viewer-body iframe{
+    width:100%;
+    height:100%;
+    border:0;
+    display:block;
+    background:#fff;
+  }
+  .viewer-placeholder{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .list-pane, .viewer-panel, .handle-chevron, tbody tr{ transition:none; }
+  }
+
+  @media (max-width: 640px){
+    :root{ --header-h:132px; --panel-max-h:58vh; }
+    .masthead{ flex-direction:column; align-items:flex-start; gap:6px; }
+    .tally{ text-align:left; padding-bottom:0; }
+    td.col-location{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="masthead">
+    <div class="masthead-title-wrap">
+      <span class="eyebrow">Volkstuintjes in Amsterdam</span>
+      <h1>The Garden Register</h1>
+    </div>
+    <div class="tally" id="tally">&nbsp;</div>
+  </header>
+
+  <main class="list-pane" id="list-pane">
+    <table class="garden-table" id="garden-table" hidden>
+      <thead>
+        <tr>
+          <th data-key="Name" aria-sort="ascending">
+            <button type="button"><span>Name</span><span class="sort-arrow">▲</span></button>
+          </th>
+          <th data-key="Gardens">
+            <button type="button"><span>Gardens</span><span class="sort-arrow">▲</span></button>
+          </th>
+          <th data-key="Location">
+            <button type="button"><span>Location</span><span class="sort-arrow">▲</span></button>
+          </th>
+          <th data-key="Maps">
+            <button type="button" disabled style="cursor:default;"><span>Google Maps</span></button>
+          </th>
+          <th data-key="Website">
+            <button type="button" disabled style="cursor:default;"><span>Website</span></button>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="garden-rows"></tbody>
+    </table>
+    <div id="status-state"></div>
+  </main>
+
+<script>
+  // Edit this array to change what shows up in the register.
+  // Each entry needs: Name (string), Gardens (integer), Location (string), Website (url).
+  window.GARDENS_DATA = [
+{Name: "De Molen",Gardens: 152, Website: "https://tuinparkdemolen.nl/", Location: "Noord", Maps: "52.3896586,4.9712505", Notes: ""},
+{Name: "Wijkergouw",Gardens: 226, Website: "https://www.wijkergouw.nl/", Location: "Noord", Maps: "52.3870621,4.9633277", Notes: ""},
+{Name: "Rust en Vreugd",Gardens: 115, Website: "https://www.tuinpark-rustenvreugd.nl/", Location: "Noord", Maps: "52.3835507,4.9667496", Notes: ""},
+{Name: "Tuinwijck",Gardens: 220, Website: "https://www.tuinparktuinwijck.nl/", Location: "Noord", Maps: "52.3838541,4.974492", Notes: ""},
+{Name: "Kweeklust",Gardens: 103, Website: "https://www.tuinparkkweeklust.nl/", Location: "Noord", Maps: "52.3798508,4.9745237", Notes: ""},
+{Name: "Buikslotermeer",Gardens: 246, Website: "https://www.tuinparkbuikslotermeer.nl/", Location: "Noord", Maps: "52.3946791,4.96512", Notes: ""},
+
+{Name: "Dijkzicht",Gardens: 204, Website: "https://www.tuinparkdijkzicht.nl/", Location: "Zuidoost near Arena", Maps: "52.3237084,4.9170709", Notes: ""},
+{Name: "Ons Lustoord",Gardens: 314, Website: "https://www.onslustoord.nl/", Location: "Zuidoost near Arena", Maps: "52.3190675,4.9220841", Notes: ""},
+{Name: "De Federatie",Gardens: 210, Website: "https://www.defederatie.net/", Location: "Zuidoost near Arena", Maps: "52.3189337,4.9235467", Notes: ""},
+{Name: "Nieuw Vredelust",Gardens: 103, Website: "https://www.tuinparknieuwvredelust.nl/", Location: "Zuidoost near Arena", Maps: "52.318304,4.9291403", Notes: "will close for new neighborhood?"},
+
+{Name: "De Bretten",Gardens: 203, Website: "https://www.tuinparkdebretten.nl/", Location: "West/Westerpark", Maps: "52.3871423,4.81383", Notes: ""},
+{Name: "De Groote Braak",Gardens: 408, Website: "https://www.degrootebraak.nl/", Location: "West/Westerpark", Maps: "52.3868,4.7751529", Notes: ""},
+{Name: "Nut en Genoegen",Gardens: 375, Website: "https://www.nutengenoegen.amsterdam/", Location: "West/Westerpark", Maps: "52.3875265,4.8574511", Notes: ""},
+{Name: "Sloterdijkermeer",Gardens: 274, Website: "https://www.sloterdijkermeer.nl/", Location: "West/Westerpark", Maps: "52.3877695,4.8525969", Notes: ""},
+{Name: "Zonnehoek",Gardens: 70, Website: "https://www.zonnehoekamsterdam.nl/", Location: "West/Westerpark", Maps: "52.393781,4.8713363", Notes: ""},
+
+{Name: "De Eendracht",Gardens: 239, Website: "https://volkstuinpark-de-eendracht.nl/", Location: "Tuinen van West", Maps: "52.3726647,4.781337", Notes: "239 houses"},
+{Name: "Osdorp",Gardens: 136, Website: "https://www.tuingroeposdorp.nl/", Location: "Tuinen van West", Maps: "52.3763889,4.7725", Notes: ""},
+{Name: "T.I.G.E.N.O.",Gardens: 215, Website: "https://tuinparktigeno.nl/", Location: "Tuinen van West", Maps: "52.3753413,4.7848614", Notes: ""},
+
+{Name: "Ons Buiten",Gardens: 446, Website: "https://www.ons-buiten.nl/", Location: "Sloten", Maps: "52.335553,4.836549", Notes: "unknown number of gardens"},
+{Name: "VAT Sloten",Gardens: 200, Website: "https://www.vat-sloten.nl/", Location: "Sloten", Maps: "52.3387824,4.7983765", Notes: ""},
+{Name: "Eigen Hof",Gardens: 159, Website: "https://www.tuinparkeigenhof.nl/", Location: "Sloten", Maps: "52.3369287,4.7993674", Notes: ""},
+{Name: "Lissabon",Gardens: 108, Website: "https://www.tuinparklissabon.nl/", Location: "Sloten", Maps: "52.3404946,4.814983", Notes: ""},
+
+{Name: "Frankendael",Gardens: 200, Website: "https://www.vtvfrankendael.nl/", Location: "Driemond/Weesp", Maps: "52.3110963,5.018237", Notes: ""},
+{Name: "Linnaeus",Gardens: 317, Website: "https://www.volkstuin-linnaeus.nl/", Location: "Driemond/Weesp", Maps: "52.3130813,5.0153792", Notes: ""},
+
+{Name: "Amstelglorie",Gardens: 440, Website: "https://www.amstelglorie.nl/", Location: "Amstel", Maps: "52.3336601,4.9083666", Notes: ""},
+{Name: "Buitenzorg",Gardens: 99, Website: "https://www.tuinparkbuitenzorg.nl/", Location: "Noord", Maps: "52.3886059,4.9267753", Notes: ""},
+{Name: "De Bongerd",Gardens: 137, Website: "https://www.volkstuinparkdebongerd.nl/", Location: "Noord", Maps: "52.4159273,4.9092455", Notes: "137/48?"},
+{Name: "Klein Dantzig",Gardens: 120, Website: "https://www.kleindantzig.nl/", Location: "Oost", Maps: "52.3503884,4.9263056", Notes: "in Park Frankendael"},
+{Name: "Nieuwe Levenskracht",Gardens: 151, Website: "https://www.tuinparknieuwelevenskracht.nl/", Location: "Oost", Maps: "52.3479151,4.9585374", Notes: ""}
+  ];
+</script>
+<script>
+(function(){
+  const listPane = document.getElementById('list-pane');
+  const table = document.getElementById('garden-table');
+  const tbody = document.getElementById('garden-rows');
+  const statusState = document.getElementById('status-state');
+  const tally = document.getElementById('tally');
+  const headerCells = Array.from(document.querySelectorAll('thead th[data-key]'));
+
+  let gardens = [];
+  let sortKey = 'Location';
+  let sortAsc = false;
+  let selectedId = null;
+
+  // ---------- Load data ----------
+  // Data lives right here in the page (see the GARDENS_DATA block above)
+  // so this file works by double-clicking it — no server, no fetch,
+  // no file:// restrictions. Edit that array above to update the list.
+  try {
+    const json = window.GARDENS_DATA;
+    if(!Array.isArray(json)) throw new Error('GARDENS_DATA must be a JSON array');
+    gardens = json.map((g, i) => ({
+      id: i,
+      Name: g.Name ?? '',
+      Gardens: Number.isFinite(Number(g.Gardens)) ? Number(g.Gardens) : 0,
+      Maps: g.Maps ?? '',
+      Location: g.Location ?? '',
+      Website: g.Website ?? ''
+    }));
+    table.hidden = false;
+    renderTally();
+    renderRows();
+  } catch(err) {
+    statusState.innerHTML = `
+      <div class="error-state">
+        <strong>Couldn't load the garden data</strong> (${escapeHtml(err.message)}).<br><br>
+        Check the <code>GARDENS_DATA</code> array near the top of the
+        <code>&lt;script&gt;</code> block — it should be a JSON array of objects with
+        <code>Name</code>, <code>Gardens</code>, <code>Location</code>, <code>Maps</code>, <code>Website</code>.
+      </div>`;
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function renderTally(){
+    tally.innerHTML = `<strong>${gardens.length}</strong> venues catalogued`;
+  }
+
+  function sortedGardens(){
+    const copy = gardens.slice();
+    copy.sort((a,b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if(typeof va === 'string'){ va = va.toLowerCase(); vb = vb.toLowerCase(); }
+      if(va < vb) return sortAsc ? -1 : 1;
+      if(va > vb) return sortAsc ? 1 : -1;
+      return 0;
+    });
+    return copy;
+  }
+
+  function renderRows(){
+    const rows = sortedGardens();
+    tbody.innerHTML = '';
+    rows.forEach(g => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = g.id;
+      if(g.id === selectedId) tr.classList.add('selected');
+
+      const nameCell = document.createElement('td');
+      nameCell.className = 'col-name';
+      nameCell.textContent = g.Name;
+
+      const countCell = document.createElement('td');
+      countCell.className = 'col-count';
+      countCell.textContent = g.Gardens;
+
+      const locCell = document.createElement('td');
+      locCell.className = 'col-location';
+      locCell.textContent = g.Location;
+
+      const mapsCell = document.createElement('td');
+      mapsCell.className = 'col-maps';
+      if(g.Maps){
+		const lnk1 = document.createElement('a');
+        const btn1 = document.createElement('button');
+        btn1.type = 'button';
+        btn1.className = 'visit-link';
+        btn1.innerHTML = `<span>Open</span><span class="arrow">&#8599;</span>`;
+		lnk1.href = 'https://www.google.com/maps/place/' + g.Maps;
+		lnk1.target = '_blank';
+		lnk1.appendChild(btn1);
+        mapsCell.appendChild(lnk1);
+      } else {
+        mapsCell.textContent = '—';
+      }
+
+      const siteCell = document.createElement('td');
+      siteCell.className = 'col-site';
+      if(g.Website){
+		const lnk2 = document.createElement('a');
+        const btn2 = document.createElement('button');
+        btn2.type = 'button';
+        btn2.className = 'visit-link';
+        btn2.innerHTML = `<span>Visit</span><span class="arrow">&#8599;</span>`;
+		lnk2.href = g.Website;
+		lnk2.target = '_blank';
+		lnk2.appendChild(btn2);
+        siteCell.appendChild(lnk2);
+      } else {
+        siteCell.textContent = '—';
+      }
+
+      tr.append(nameCell, countCell, locCell, mapsCell, siteCell);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateSortIndicators(){
+    headerCells.forEach(th => {
+      if(th.dataset.key === sortKey){
+        th.setAttribute('aria-sort', sortAsc ? 'ascending' : 'descending');
+      } else {
+        th.removeAttribute('aria-sort');
+      }
+    });
+  }
+
+  headerCells.forEach(th => {
+    const btn = th.querySelector('button');
+    if(btn.disabled) return;
+    btn.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if(sortKey === key){
+        sortAsc = !sortAsc;
+      } else {
+        sortKey = key;
+        sortAsc = true;
+      }
+      updateSortIndicators();
+      renderRows();
+    });
+  });
+  updateSortIndicators();
+
+})();
+</script>
+</body>
+</html>
